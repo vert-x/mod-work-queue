@@ -1,3 +1,9 @@
+.classpath
+.gradle
 .idea
-mod-work-queue.iml
+.project
+.settings
+mod-auth-mgr.iml
+bin
+build
 out

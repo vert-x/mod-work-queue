@@ -15,7 +15,7 @@
  */
 
 load('vertx.js');
-load('javascript/test_utils.js');
+load('test_utils.js');
 
 var tu = new TestUtils();
 

@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-load('javascript/test_utils.js')
+load('test_utils.js')
 load('vertx.js')
 
 var tu = new TestUtils();
 
 var eb = vertx.eventBus;
 
-function testWorkQueue() {
+function testPersistentWorkQueue() {
+
   var numMessages = 100;
 
   var count = 0;
@@ -39,13 +40,31 @@ function testWorkQueue() {
       blah: "somevalue: " + i
     })
   }
+
+}
+
+function deleteAll() {
+  eb.send('test.persistor', {
+    collection: 'work',
+    action: 'delete',
+    matcher: {}
+  }, function(reply) {
+    tu.azzert(reply.status === 'ok');
+  });
 }
 
 tu.registerTests(this);
-var queueConfig = {address: 'test.orderQueue'}
-vertx.deployModule('work-queue-v1.0', queueConfig, 1, function() {
-  tu.appReady();
+
+var persistorConfig = {address: 'test.persistor', db_name: 'test_db'}
+vertx.deployModule('mongo-persistor-v1.0', persistorConfig, 1, function() {
+  deleteAll();
+  var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
+  vertx.deployModule('work-queue-v1.0', queueConfig, 1, function() {
+    tu.appReady();
+  });
 });
+
+
 
 function vertxStop() {
   tu.unregisterAll();

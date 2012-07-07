@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-load('javascript/test_utils.js')
+load('test_utils.js')
 load('vertx.js')
 
 var tu = new TestUtils();
 
 var eb = vertx.eventBus;
 
-function testPersistentWorkQueue() {
+var numMessages = 10;
 
-  var numMessages = 100;
+function testPersistentReloadWorkQueue() {
 
   var count = 0;
   var doneHandler = function() {
@@ -35,36 +35,33 @@ function testPersistentWorkQueue() {
 
   eb.registerHandler("done", doneHandler);
 
-  for (var i = 0; i < numMessages; i++) {
-    eb.send('test.orderQueue', {
-      blah: "somevalue: " + i
-    })
-  }
-
+  var persistorConfig = {address: 'test.persistor', db_name: 'test_db'}
+  vertx.deployModule('mongo-persistor-v1.0', persistorConfig, 1, function() {
+    insertWork();
+    var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
+    vertx.deployModule('work-queue-v1.0', queueConfig, 1, function() {
+      vertx.deployWorkerVerticle('order_processor.js', {dont_send_app_lifecycle: true}, 10);
+    });
+  });
 }
 
-function deleteAll() {
-  eb.send('test.persistor', {
-    collection: 'work',
-    action: 'delete',
-    matcher: {}
-  }, function(reply) {
-    tu.azzert(reply.status === 'ok');
-  });
+function insertWork() {
+
+  for (var i = 0; i < numMessages; i++) {
+
+    eb.send('test.persistor', {
+      collection: 'work',
+      action: 'save',
+      document: {
+        blah: "foo" + i
+      }
+    });
+  }
 }
 
 tu.registerTests(this);
 
-var persistorConfig = {address: 'test.persistor', db_name: 'test_db'}
-vertx.deployModule('mongo-persistor-v1.0', persistorConfig, 1, function() {
-  deleteAll();
-  var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
-  vertx.deployModule('work-queue-v1.0', queueConfig, 1, function() {
-    tu.appReady();
-  });
-});
-
-
+tu.appReady();
 
 function vertxStop() {
   tu.unregisterAll();
