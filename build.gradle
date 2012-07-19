@@ -34,6 +34,7 @@ defaultTasks = ['assemble']
 
 sourceCompatibility = '1.7'
 targetCompatibility = '1.7'
+jar.enabled = false // we don't need this
 
 repositories {
   maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
@@ -60,6 +61,7 @@ dependencies {
 test {
   systemProperty 'vertx.test.timeout', 15
   systemProperty 'vertx.mods', "$projectDir/build/tmp/mod-test"
+  systemProperty 'vertx.version', "$project.version"
   testLogging.showStandardStreams = true
 }
 
