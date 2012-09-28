@@ -60,11 +60,26 @@ An example, persistent configuration would be:
 
 ### Send
 
-To send data to the work queue, just send a JSON message to the main address of the module. The JSON message can have any structure you like - the work queue does not look at it.
+To send data to the work queue, just send a JSON message to the main address of the module:
+
+    // (JavaScript)
+    vertx.eventBus.send("test.orderQueue", {
+        /* ...order data... */
+    });
+
+The JSON message can have any structure you like - the work queue does not look at it.
 
 Once the work has been sent out to a worker, and processed, and that worker has replied, the reply will be forwarded back to the sender.
 
-You can optionally receive a reply when the work has been accepted (i.e. queued, but not yet processed), to do this add a field `accepted_reply` with a value holding the address where you want the reply sent. Once the send has been accepted, and queued a message will be sent to that address:
+You can optionally receive a reply when the work has been accepted (i.e. queued, but not yet processed), to do this add a field `accepted_reply` with a value holding the address where you want the reply sent:
+
+    // (JavaScript)
+    vertx.eventBus.send("test.orderQueue", {
+        accepted_reply: "test.acceptedReplyAddress",
+        /* ...order data... */
+    });
+
+Once the send has been accepted and queued, a message will be sent to that address:
 
     {
         "status": "accepted"
@@ -89,21 +104,58 @@ The message should have the following structure:
         "processor": <processor>
     }
 
-Where `processor` is the address of the processors handler. For example, if the processor has registered a handler at address `processor1`, then it would send the message:
+Where `processor` is the address of the processors handler. For example, if the processor has registered a handler at address `processor1`:
+
+    // (JavaScript)
+    vertx.eventBus.registerHandler("processor1", function(message, replier) {
+        // ...
+    });
+
+...then it would send the message:
 
     {
         "processor": "processor1"
     }    
 
+...like this:
+
+    // (JavaScript)
+    vertx.eventBus.send("test.orderQueue.register", {
+        "processor": "processor1"
+    });
+
 When this message is received at the work queue, the work queue registers this address as a processor interested in work. When work arrives it will send the work off to any available processors, in a round-robin fashion.
 
-When a processor receives some work, and has completed its processing. It should reply to the message with an empty reply. This tells the work queue that the work has been processed and can be forgotten about. If a reply is not received within `process_timeout` milliseconds then it will be assumed that the processor failed, and the work will be made available for other processors to process.
+Alternately, if you want notification when the registration is complete, include a reply handler:
 
-Once the register is complete, a reply message will be sent:
+    // (JavaScript)
+    vertx.eventBus.send("test.orderQueue.register", {
+        "processor": "processor1"
+    }, function(reply) {
+        if (reply && reply.status === "ok") {
+            // Handler is registered
+        }
+    });
+
+Once the registration is complete, a reply message in this form will be sent to the reply handler:
 
     {
         "status": "ok"
     }
+
+### Process Work
+
+When a processor receives some work and has completed its processing, it should send an empty reply to the message:
+
+    // (JavaScript)
+    vertx.eventBus.registerHandler("processor1", function(message, replier) {
+        // ...do the work...
+
+        // Send the reply
+        replier({});
+    });
+
+This tells the work queue that the work has been processed and can be forgotten about. If a reply is not received within `process_timeout` milliseconds then it will be assumed that the processor failed, and the work will be made available for other processors to process.
 
 ### Unregister
 
