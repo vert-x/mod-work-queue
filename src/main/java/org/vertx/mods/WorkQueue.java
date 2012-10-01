@@ -94,7 +94,6 @@ public class WorkQueue extends BusModBase {
   }
 
   private interface MessageHolder {
-    Message<JsonObject> getMessage();
     JsonObject getBody();
     void reply(JsonObject reply, Handler<Message<JsonObject>> replyReplyHandler);
   }
@@ -125,48 +124,54 @@ public class WorkQueue extends BusModBase {
       });
       eb.send(address, message.getBody(), new Handler<Message<JsonObject>>() {
         public void handle(Message<JsonObject> reply) {
-          vertx.cancelTimer(timeoutID);
-          processors.add(address);
-          if (persistorAddress != null) {
-            JsonObject msg = new JsonObject().putString("action", "delete").putString("collection", collection)
-                                             .putObject("matcher", message.getBody());
-            eb.send(persistorAddress, msg, new Handler<Message<JsonObject>>() {
-              public void handle(Message<JsonObject> reply) {
-                if (!reply.body.getString("status").equals("ok"))                 {
-                  logger.error("Failed to delete document from queue: " + reply.body.getString("message"));
-                }
-                messageProcessed(reply, message);
-              }
-            });
-          } else {
-
-            messageProcessed(reply, message);
-          }
+          messageReplied(message, reply, address, timeoutID);
         }
       });
     }
   }
 
-  // Connect up the replies, this has to be done recursively
-  private void sendReply(Message<JsonObject> message, final Message<JsonObject> reply) {
-    message.reply(reply.body, new Handler<Message<JsonObject>>() {
-      public void handle(Message<JsonObject> replyReply) {
-        sendReply(reply, replyReply);
-      }
-    });
-  }
-
-  private void messageProcessed(final Message<JsonObject> reply, MessageHolder holder) {
-    checkWork();
+  // A reply has been received from the processor
+  private void messageReplied(final MessageHolder message, final Message<JsonObject> reply,
+                              final String processorAddress,
+                              final long timeoutID) {
     if (reply.replyAddress != null) {
-      holder.reply(reply.body, new Handler<Message<JsonObject>>() {
+      // The reply itself has a reply specified so we don't consider the message processed just yet
+      message.reply(reply.body, new Handler<Message<JsonObject>>() {
         public void handle(final Message<JsonObject> replyReply) {
-          sendReply(reply, replyReply);
+          reply.reply(replyReply.body, new Handler<Message<JsonObject>>() {
+            public void handle(Message<JsonObject> replyReplyReply) {
+              messageReplied(new NonLoadedHolder(replyReply), replyReplyReply, processorAddress, timeoutID);
+            }
+          });
         }
       });
     } else {
-      holder.reply(reply.body, null);
+      if (persistorAddress != null) {
+        JsonObject msg = new JsonObject().putString("action", "delete").putString("collection", collection)
+            .putObject("matcher", message.getBody());
+        eb.send(persistorAddress, msg, new Handler<Message<JsonObject>>() {
+          public void handle(Message<JsonObject> replyReply) {
+            if (!replyReply.body.getString("status").equals("ok"))                 {
+              logger.error("Failed to delete document from queue: " + replyReply.body.getString("message"));
+            }
+            messageProcessed(timeoutID, processorAddress, message, reply);
+          }
+        });
+      } else {
+        messageProcessed(timeoutID, processorAddress, message, reply);
+      }
     }
+  }
+
+  // The conversation between the sender and the processor has ended, so we can add the processor back on the queue
+  private void messageProcessed(long timeoutID, String processorAddress, MessageHolder message,
+                                Message<JsonObject> reply) {
+    // The processor
+    // can go back on the queue
+    vertx.cancelTimer(timeoutID);
+    processors.add(processorAddress);
+    message.reply(reply.body, null);
+    checkWork();
   }
 
   private void doRegister(Message<JsonObject> message) {
@@ -233,10 +238,6 @@ public class WorkQueue extends BusModBase {
       this.body = body;
     }
 
-    public Message<JsonObject> getMessage() {
-      return null;
-    }
-
     public JsonObject getBody() {
       return body;
     }
@@ -252,10 +253,6 @@ public class WorkQueue extends BusModBase {
 
     private NonLoadedHolder(Message<JsonObject> message) {
       this.message = message;
-    }
-
-    public Message<JsonObject> getMessage() {
-      return message;
     }
 
     public JsonObject getBody() {
