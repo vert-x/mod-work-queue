@@ -46,6 +46,16 @@ public class JavaScriptWorkQueueTest extends TestBase {
   }
 
   @Test
+  public void testWorkQueueWithReplyHandler() throws Exception {
+    startApp("processor_reply_handler_test_client.js");
+    int numProcessors = 10;
+    for (int i = 0; i < numProcessors; i++) {
+      startApp(true, "order_processor_with_reply_handler.js");
+    }
+    startTest(getMethodName());
+  }
+
+  @Test
   public void testPersistentWorkQueue() throws Exception {
     startApp("persistent_test_client.js");
     int numProcessors = 10;

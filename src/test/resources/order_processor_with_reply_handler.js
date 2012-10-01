@@ -14,41 +14,34 @@
  * limitations under the License.
  */
 
-load('test_utils.js')
-load('vertx.js')
+load('vertx.js');
+load('test_utils.js');
 
 var tu = new TestUtils();
 
 var eb = vertx.eventBus;
 
-function testWorkQueue() {
-  var numMessages = 100;
+var id = vertx.generateUUID();
 
-  var count = 0;
-  var doneHandler = function() {
-    if (++count == numMessages) {
-      eb.unregisterHandler("done", doneHandler);
-      tu.testComplete();
-    }
-  };
+var handler = function(message, replier) {
+    tu.azzert(message.blah != "undefined");
+    replier({'message': 'foo'}, function(replyToReply, replyToReplyReplier) {
+        replyToReplyReplier({'message': 'bar'});
+    });
+};
 
-  eb.registerHandler("done", doneHandler);
+eb.registerHandler(id, handler);
 
-  for (var i = 0; i < numMessages; i++) {
-    eb.send('test.orderQueue', {
-      blah: "somevalue: " + i
-    })
-  }
-}
-
-
-tu.registerTests(this);
-var queueConfig = {address: 'test.orderQueue'}
-vertx.deployModule('vertx.work-queue-v' + java.lang.System.getProperty('vertx.version'), queueConfig, 1, function() {
-  tu.appReady();
+eb.send('test.orderQueue.register', {
+    processor: id
+}, function() {
+    tu.appReady();
 });
 
 function vertxStop() {
-  tu.unregisterAll();
-  tu.appStopped();
+    eb.send('test.orderQueue.unregister', {
+        processor: id
+    });
+    eb.unregisterHandler(id, handler);
+    tu.appStopped();
 }

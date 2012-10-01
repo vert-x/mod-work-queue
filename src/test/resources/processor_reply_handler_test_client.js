@@ -21,34 +21,30 @@ var tu = new TestUtils();
 
 var eb = vertx.eventBus;
 
-function testWorkQueue() {
-  var numMessages = 100;
-
-  var count = 0;
-  var doneHandler = function() {
-    if (++count == numMessages) {
-      eb.unregisterHandler("done", doneHandler);
-      tu.testComplete();
+function testWorkQueueWithReplyHandler() {
+    var numMessages = 1;
+    var count = 0;
+    for (var i = 0; i < numMessages; i++) {
+        eb.send('test.orderQueue', {
+            blah: "somevalue: " + i
+        }, function (reply, replyReplier) {
+          replyReplier({'wibble': 'eek'}, function(replyReplyReplier) {
+              if (++count == numMessages) {
+                  tu.testComplete();
+              }
+          });
+        });
     }
-  };
-
-  eb.registerHandler("done", doneHandler);
-
-  for (var i = 0; i < numMessages; i++) {
-    eb.send('test.orderQueue', {
-      blah: "somevalue: " + i
-    })
-  }
 }
 
 
 tu.registerTests(this);
 var queueConfig = {address: 'test.orderQueue'}
 vertx.deployModule('vertx.work-queue-v' + java.lang.System.getProperty('vertx.version'), queueConfig, 1, function() {
-  tu.appReady();
+    tu.appReady();
 });
 
 function vertxStop() {
-  tu.unregisterAll();
-  tu.appStopped();
+    tu.unregisterAll();
+    tu.appStopped();
 }

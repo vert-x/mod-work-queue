@@ -96,7 +96,7 @@ public class WorkQueue extends BusModBase {
   private interface MessageHolder {
     Message<JsonObject> getMessage();
     JsonObject getBody();
-    void reply(JsonObject reply);
+    void reply(JsonObject reply, Handler<Message<JsonObject>> replyReplyHandler);
   }
 
   private Handler<Message<JsonObject>> createLoadReplyHandler() {
@@ -135,25 +135,38 @@ public class WorkQueue extends BusModBase {
                 if (!reply.body.getString("status").equals("ok"))                 {
                   logger.error("Failed to delete document from queue: " + reply.body.getString("message"));
                 }
-                messageProcessed(reply.body, message);
+                messageProcessed(reply, message);
               }
             });
           } else {
-            messageProcessed(reply.body, message);
+
+            messageProcessed(reply, message);
           }
         }
       });
     }
   }
 
-  private void messageProcessed(JsonObject reply, MessageHolder holder) {
-    checkWork();
-    forwardReply(reply, holder);
+  // Connect up the replies, this has to be done recursively
+  private void sendReply(Message<JsonObject> message, final Message<JsonObject> reply) {
+    message.reply(reply.body, new Handler<Message<JsonObject>>() {
+      public void handle(Message<JsonObject> replyReply) {
+        sendReply(reply, replyReply);
+      }
+    });
   }
 
-  // Forward the reply back to the sender
-  private void forwardReply(JsonObject reply, MessageHolder holder) {
-    holder.reply(reply);
+  private void messageProcessed(final Message<JsonObject> reply, MessageHolder holder) {
+    checkWork();
+    if (reply.replyAddress != null) {
+      holder.reply(reply.body, new Handler<Message<JsonObject>>() {
+        public void handle(final Message<JsonObject> replyReply) {
+          sendReply(reply, replyReply);
+        }
+      });
+    } else {
+      holder.reply(reply.body, null);
+    }
   }
 
   private void doRegister(Message<JsonObject> message) {
@@ -228,7 +241,7 @@ public class WorkQueue extends BusModBase {
       return body;
     }
 
-    public void reply(JsonObject reply) {
+    public void reply(JsonObject reply, Handler<Message<JsonObject>> replyReplyHandler) {
       //Do nothing - we are loaded from storage so the sender has long gone
     }
   }
@@ -249,8 +262,8 @@ public class WorkQueue extends BusModBase {
       return message.body;
     }
 
-    public void reply(JsonObject reply) {
-      message.reply(reply);
+    public void reply(JsonObject reply, Handler<Message<JsonObject>> replyReplyHandler) {
+      message.reply(reply, replyReplyHandler);
     }
   }
 
