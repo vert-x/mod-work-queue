@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-load('test_utils.js')
 load('vertx.js')
-
-var tu = new TestUtils();
+load("vertx_tests.js")
 
 var eb = vertx.eventBus;
 
-function testWorkQueue() {
+function testPersistentWorkQueue() {
+
   var numMessages = 100;
 
   var count = 0;
   var doneHandler = function() {
     if (++count == numMessages) {
       eb.unregisterHandler("done", doneHandler);
-      tu.testComplete();
+      vassert.testComplete();
     }
   };
 
@@ -39,16 +38,30 @@ function testWorkQueue() {
       blah: "somevalue: " + i
     })
   }
+
 }
 
+function deleteAll() {
+  eb.send('test.persistor', {
+    collection: 'work',
+    action: 'delete',
+    matcher: {}
+  }, function(reply) {
+    vassert.assertEquals("ok", reply.status);
+  });
+}
 
-tu.registerTests(this);
-var queueConfig = {address: 'test.orderQueue'}
-vertx.deployModule('vertx.work-queue-v' + java.lang.System.getProperty('vertx.version'), queueConfig, 1, function() {
-  tu.appReady();
+var persistorConfig = {address: 'test.persistor', db_name: 'test_db', fake: true}
+var script = this;
+var numProcessors = 10;
+vertx.deployModule('maven:io.vertx:mod-mongo-persistor:2.0.0-SNAPSHOT', persistorConfig, 1, function() {
+  deleteAll();
+  var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
+  vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, 1, function() {
+    vertx.deployVerticle("integration_tests/javascript/order_processor.js", null, numProcessors, function(depID) {
+      if (depID) {
+        initTests(script);
+      }
+    })
+  });
 });
-
-function vertxStop() {
-  tu.unregisterAll();
-  tu.appStopped();
-}

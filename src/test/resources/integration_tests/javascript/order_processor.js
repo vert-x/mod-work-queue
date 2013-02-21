@@ -15,18 +15,14 @@
  */
 
 load('vertx.js');
-load('test_utils.js');
-
-var tu = new TestUtils();
+load("vertx_tests.js");
 
 var eb = vertx.eventBus;
 
 var id = vertx.generateUUID();
 
-var dontsendAppLifeCycle = vertx.config.dont_send_app_lifecycle;
-
 var handler = function(message, replier) {
-  tu.azzert(message.blah != "undefined");
+  vassert.assertTrue(message.blah != "undefined");
   replier({});
   eb.send('done', {});
 };
@@ -35,20 +31,12 @@ eb.registerHandler(id, handler);
 
 eb.send('test.orderQueue.register', {
   processor: id
-}, function() {
-  if (!dontsendAppLifeCycle) {
-    tu.appReady();
-  }
 });
 
 function vertxStop() {
   eb.send('test.orderQueue.unregister', {
     processor: id
   });
-  eb.unregisterHandler(id, handler);
-  if (!dontsendAppLifeCycle) {
-    tu.appStopped();
-  }
 }
 
 

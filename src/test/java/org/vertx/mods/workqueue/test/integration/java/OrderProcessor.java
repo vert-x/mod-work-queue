@@ -1,4 +1,4 @@
-package vertx.mods.tests.verticles;
+package org.vertx.mods.workqueue.test.integration.java;
 
 /*
  * Copyright 2011-2012 the original author or authors.
@@ -20,8 +20,7 @@ import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.EventBus;
 import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.deploy.Verticle;
-import org.vertx.java.framework.TestUtils;
+import org.vertx.java.platform.Verticle;
 
 import java.util.UUID;
 
@@ -30,8 +29,6 @@ import java.util.UUID;
  */
 public class OrderProcessor extends Verticle implements Handler<Message<JsonObject>> {
 
-  private TestUtils tu;
-
   private EventBus eb;
 
   private String address = UUID.randomUUID().toString();
@@ -39,30 +36,23 @@ public class OrderProcessor extends Verticle implements Handler<Message<JsonObje
   @Override
   public void start() throws Exception {
     eb = vertx.eventBus();
-    tu = new TestUtils(vertx);
     eb.registerHandler(address, this);
     JsonObject msg = new JsonObject().putString("processor", address);
     eb.send("test.orderQueue.register", msg);
-    tu.appReady();
   }
 
 
   @Override
   public void stop() throws Exception {
-
     JsonObject msg = new JsonObject().putString("processor", address);
     eb.send("test.orderQueue.unregister", msg);
-
     eb.unregisterHandler(address, this);
-
-    tu.appStopped();
   }
 
   public void handle(Message<JsonObject> message) {
     try {
       // Simulate some processing time - ok to sleep here since this is a worker application
       Thread.sleep(100);
-
       message.reply();
       eb.send("done", new JsonObject());
     } catch (Exception e) {

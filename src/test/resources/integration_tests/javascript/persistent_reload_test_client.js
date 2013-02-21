@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-load('test_utils.js')
 load('vertx.js')
-
-var tu = new TestUtils();
+load("vertx_tests.js")
 
 var eb = vertx.eventBus;
 
@@ -28,19 +26,18 @@ function testPersistentReloadWorkQueue() {
   var count = 0;
   var doneHandler = function() {
     if (++count == numMessages) {
-      eb.unregisterHandler("done", doneHandler);
-      tu.testComplete();
+      vassert.testComplete();
     }
   };
 
   eb.registerHandler("done", doneHandler);
 
-  var persistorConfig = {address: 'test.persistor', db_name: 'test_db'}
-  vertx.deployModule('vertx.mongo-persistor-v1.0', persistorConfig, 1, function() {
+  var persistorConfig = {address: 'test.persistor', db_name: 'test_db', fake: true}
+  vertx.deployModule('maven:io.vertx:mod-mongo-persistor:2.0.0-SNAPSHOT', persistorConfig, 1, function() {
     insertWork();
     var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
-    vertx.deployModule('vertx.work-queue-v' + java.lang.System.getProperty('vertx.version'), queueConfig, 1, function() {
-      vertx.deployWorkerVerticle('order_processor.js', {dont_send_app_lifecycle: true}, 10);
+    vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, 1, function() {
+      vertx.deployVerticle('integration_tests/javascript/order_processor.js', null, 10, null);
     });
   });
 }
@@ -48,7 +45,6 @@ function testPersistentReloadWorkQueue() {
 function insertWork() {
 
   for (var i = 0; i < numMessages; i++) {
-
     eb.send('test.persistor', {
       collection: 'work',
       action: 'save',
@@ -59,11 +55,4 @@ function insertWork() {
   }
 }
 
-tu.registerTests(this);
-
-tu.appReady();
-
-function vertxStop() {
-  tu.unregisterAll();
-  tu.appStopped();
-}
+initTests(this)

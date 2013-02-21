@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-load('test_utils.js')
 load('vertx.js')
-
-var tu = new TestUtils();
+load("vertx_tests.js")
 
 var eb = vertx.eventBus;
 
@@ -30,7 +28,7 @@ function testWorkQueueWithReplyHandler() {
         }, function (reply, replyReplier) {
           replyReplier({'wibble': 'eek'}, function(replyReplyReplier) {
               if (++count == numMessages) {
-                  tu.testComplete();
+                  vassert.testComplete();
               }
           });
         });
@@ -38,13 +36,13 @@ function testWorkQueueWithReplyHandler() {
 }
 
 
-tu.registerTests(this);
 var queueConfig = {address: 'test.orderQueue'}
-vertx.deployModule('vertx.work-queue-v' + java.lang.System.getProperty('vertx.version'), queueConfig, 1, function() {
-    tu.appReady();
+var script = this;
+var numProcessors = 10;
+vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, 1, function() {
+  vertx.deployVerticle("integration_tests/javascript/order_processor_with_reply_handler.js", null, numProcessors, function(depID) {
+    if (depID) {
+      initTests(script);
+    }
+  })
 });
-
-function vertxStop() {
-    tu.unregisterAll();
-    tu.appStopped();
-}

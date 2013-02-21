@@ -1,56 +1,60 @@
-package vertx.mods.tests.verticles;
+package org.vertx.mods.workqueue.test.integration.java;
 
-/*
- * Copyright 2011-2012 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+import org.junit.Test;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.EventBus;
 import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.framework.TestClientBase;
+import org.vertx.testtools.TestVerticle;
 
-/**
+import static org.vertx.testtools.VertxAssert.assertEquals;
+import static org.vertx.testtools.VertxAssert.testComplete;
+
+/*
+ * Copyright 2013 Red Hat, Inc.
+ *
+ * Red Hat licenses this file to you under the Apache License, version 2.0
+ * (the "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at:
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
-public class TestClient extends TestClientBase {
+public class WorkQueueTest extends TestVerticle {
 
-  private EventBus eb;
+  EventBus eb;
+  int processedCount;
+  int acceptedCount;
+  final int numProcessors = 10;
 
   @Override
   public void start() {
-    super.start();
     eb = vertx.eventBus();
     JsonObject config = new JsonObject();
     config.putString("address", "test.orderQueue");
-    container.deployModule("vertx.work-queue-v" + System.getProperty("vertx.version"), config, 1, new Handler<String>() {
+
+    container.deployModule(System.getProperty("vertx.modulename"), config, 1, new Handler<String>() {
       public void handle(String res) {
-        tu.appReady();
+        container.deployVerticle(OrderProcessor.class.getName(), null, numProcessors, new Handler<String>() {
+          @Override
+          public void handle(String deploymentID) {
+            if (deploymentID != null) {
+              WorkQueueTest.super.start();
+            }
+          }
+        });
       }
     });
   }
 
-  @Override
-  public void stop() {
-    super.stop();
-  }
-
-  int processedCount;
-
-  int acceptedCount;
-
+  @Test
   public void testSimple() throws Exception {
 
     final int numMessages = 30;
@@ -58,7 +62,7 @@ public class TestClient extends TestClientBase {
     eb.registerHandler("done", new Handler<Message<JsonObject>>() {
       public void handle(Message<JsonObject> message) {
         if (++processedCount == numMessages) {
-          tu.testComplete();
+          testComplete();
         }
       }
     });
@@ -69,6 +73,7 @@ public class TestClient extends TestClientBase {
     }
   }
 
+  @Test
   public void testWithAcceptedReply() throws Exception {
 
     final int numMessages = 30;
@@ -82,8 +87,8 @@ public class TestClient extends TestClientBase {
     eb.registerHandler("done", new Handler<Message<JsonObject>>() {
       public void handle(Message<JsonObject> message) {
         if (++processedCount == numMessages) {
-          tu.azzert(acceptedCount == numMessages);
-          tu.testComplete();
+          assertEquals(acceptedCount, numMessages);
+          testComplete();
         }
       }
     });
@@ -93,5 +98,4 @@ public class TestClient extends TestClientBase {
       eb.send("test.orderQueue", obj);
     }
   }
-
 }
