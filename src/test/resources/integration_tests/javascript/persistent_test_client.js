@@ -54,7 +54,7 @@ function deleteAll() {
 var persistorConfig = {address: 'test.persistor', db_name: 'test_db', fake: true}
 var script = this;
 var numProcessors = 10;
-vertx.deployModule('maven:io.vertx:mod-mongo-persistor:2.0.0-SNAPSHOT', persistorConfig, 1, function() {
+vertx.deployModule('io.vertx#mod-mongo-persistor#2.0.0-SNAPSHOT', persistorConfig, 1, function() {
   deleteAll();
   var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
   vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, 1, function() {

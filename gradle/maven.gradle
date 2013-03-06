@@ -40,7 +40,7 @@ uploadArchives {
 
 	repositories {
 		mavenDeployer {
-      setUniqueVersion(false)
+      // setUniqueVersion(false)
 
 			configuration = configurations.archives
 
@@ -64,36 +64,5 @@ uploadArchives {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // configuration methods
 
-def configurePom(def pom) {
-  pom.project {
-    description 'Simple Work Queue for Vert.x'
-    inceptionYear '2012'
-    packaging 'zip'
-    url 'https://github.com/vert-x/mod-work-queue'
 
-    developers {
-      developer {
-        id 'purplefox'
-        name 'Tim Fox'
-        // email 'developer email'
-      }
-    }
-
-    scm {
-      url 'https://github.com/vert-x/mod-work-queue.git'
-    }
-
-    licenses {
-      license {
-        name 'The Apache Software License, Version 2.0'
-        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-        distribution 'repo'
-      }
-    }
-
-    properties {
-      setProperty('project.build.sourceEncoding', 'UTF8')
-    }
-  }
-}
 
