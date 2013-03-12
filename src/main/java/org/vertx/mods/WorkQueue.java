@@ -104,7 +104,7 @@ public class WorkQueue extends BusModBase {
         processLoadBatch(reply.body.getArray("results"));
         if (reply.body.getString("status").equals("more-exist")) {
           // Get next batch
-          reply.reply(null, createLoadReplyHandler());
+          reply.reply((JsonObject)null, createLoadReplyHandler());
         }
       }
     };
