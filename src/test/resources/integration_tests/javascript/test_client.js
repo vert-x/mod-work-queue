@@ -43,8 +43,8 @@ var numProcessors = 10;
 
 var queueConfig = {address: 'test.orderQueue'}
 var script = this
-vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, 1, function() {
-  vertx.deployVerticle("integration_tests/javascript/order_processor.js", null, numProcessors, function(depID) {
+vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
+  vertx.deployVerticle("integration_tests/javascript/order_processor.js", numProcessors, function(err, depID) {
     if (depID) {
       initTests(script);
     }

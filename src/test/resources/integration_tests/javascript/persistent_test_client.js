@@ -54,11 +54,20 @@ function deleteAll() {
 var persistorConfig = {address: 'test.persistor', db_name: 'test_db', fake: true}
 var script = this;
 var numProcessors = 10;
-vertx.deployModule('io.vertx~mod-mongo-persistor~2.0.0-SNAPSHOT', persistorConfig, 1, function() {
+vertx.deployModule('io.vertx~mod-mongo-persistor~2.0.0-SNAPSHOT', persistorConfig, function(err, deployID) {
+  if (err) {
+    err.printStackTrace();
+  }
   deleteAll();
   var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
-  vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, 1, function() {
-    vertx.deployVerticle("integration_tests/javascript/order_processor.js", null, numProcessors, function(depID) {
+  vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
+    if (err) {
+      err.printStackTrace();
+    }
+    vertx.deployVerticle("integration_tests/javascript/order_processor.js", numProcessors, function(err, depID) {
+      if (err) {
+        err.printStackTrace();
+      }
       if (depID) {
         initTests(script);
       }

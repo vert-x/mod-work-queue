@@ -19,7 +19,7 @@ load("vertx_tests.js");
 
 var eb = vertx.eventBus;
 
-var id = vertx.generateUUID();
+var id = java.util.UUID.randomUUID().toString();
 
 var handler = function(message, replier) {
   vassert.assertTrue(message.blah != "undefined");

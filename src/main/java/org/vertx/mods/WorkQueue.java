@@ -101,8 +101,8 @@ public class WorkQueue extends BusModBase {
   private Handler<Message<JsonObject>> createLoadReplyHandler() {
     return new Handler<Message<JsonObject>>() {
       public void handle(Message<JsonObject> reply) {
-        processLoadBatch(reply.body.getArray("results"));
-        if (reply.body.getString("status").equals("more-exist")) {
+        processLoadBatch(reply.body().getArray("results"));
+        if (reply.body().getString("status").equals("more-exist")) {
           // Get next batch
           reply.reply((JsonObject)null, createLoadReplyHandler());
         }
@@ -134,11 +134,11 @@ public class WorkQueue extends BusModBase {
   private void messageReplied(final MessageHolder message, final Message<JsonObject> reply,
                               final String processorAddress,
                               final long timeoutID) {
-    if (reply.replyAddress != null) {
+    if (reply.replyAddress() != null) {
       // The reply itself has a reply specified so we don't consider the message processed just yet
-      message.reply(reply.body, new Handler<Message<JsonObject>>() {
+      message.reply(reply.body(), new Handler<Message<JsonObject>>() {
         public void handle(final Message<JsonObject> replyReply) {
-          reply.reply(replyReply.body, new Handler<Message<JsonObject>>() {
+          reply.reply(replyReply.body(), new Handler<Message<JsonObject>>() {
             public void handle(Message<JsonObject> replyReplyReply) {
               messageReplied(new NonLoadedHolder(replyReply), replyReplyReply, processorAddress, timeoutID);
             }
@@ -151,8 +151,8 @@ public class WorkQueue extends BusModBase {
             .putObject("matcher", message.getBody());
         eb.send(persistorAddress, msg, new Handler<Message<JsonObject>>() {
           public void handle(Message<JsonObject> replyReply) {
-            if (!replyReply.body.getString("status").equals("ok"))                 {
-              logger.error("Failed to delete document from queue: " + replyReply.body.getString("message"));
+            if (!replyReply.body().getString("status").equals("ok"))                 {
+              logger.error("Failed to delete document from queue: " + replyReply.body().getString("message"));
             }
             messageProcessed(timeoutID, processorAddress, message, reply);
           }
@@ -170,7 +170,7 @@ public class WorkQueue extends BusModBase {
     // can go back on the queue
     vertx.cancelTimer(timeoutID);
     processors.add(processorAddress);
-    message.reply(reply.body, null);
+    message.reply(reply.body(), null);
     checkWork();
   }
 
@@ -196,14 +196,14 @@ public class WorkQueue extends BusModBase {
   private void doSend(final Message<JsonObject> message) {
     if (persistorAddress != null) {
       JsonObject msg = new JsonObject().putString("action", "save").putString("collection", collection)
-                                       .putObject("document", message.body);
+                                       .putObject("document", message.body());
       eb.send(persistorAddress, msg, new Handler<Message<JsonObject>>() {
         public void handle(Message<JsonObject> reply) {
-          if (reply.body.getString("status").equals("ok")) {
+          if (reply.body().getString("status").equals("ok")) {
             actualSend(message);
           } else {
-            sendAcceptedReply(message.body, "error", reply.body.getString("message"));
-            sendError(message, reply.body.getString("message"));
+            sendAcceptedReply(message.body(), "error", reply.body().getString("message"));
+            sendError(message, reply.body().getString("message"));
           }
         }
       });
@@ -226,7 +226,7 @@ public class WorkQueue extends BusModBase {
   private void actualSend(Message<JsonObject> message) {
     messages.add(new NonLoadedHolder(message));
     //Been added to the queue so reply if appropriate
-    sendAcceptedReply(message.body, "accepted", null);
+    sendAcceptedReply(message.body(), "accepted", null);
     checkWork();
   }
 
@@ -256,7 +256,7 @@ public class WorkQueue extends BusModBase {
     }
 
     public JsonObject getBody() {
-      return message.body;
+      return message.body();
     }
 
     public void reply(JsonObject reply, Handler<Message<JsonObject>> replyReplyHandler) {

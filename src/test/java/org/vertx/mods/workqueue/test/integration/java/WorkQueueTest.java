@@ -1,6 +1,8 @@
 package org.vertx.mods.workqueue.test.integration.java;
 
 import org.junit.Test;
+import org.vertx.java.core.AsyncResult;
+import org.vertx.java.core.AsyncResultHandler;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.EventBus;
 import org.vertx.java.core.eventbus.Message;
@@ -40,16 +42,22 @@ public class WorkQueueTest extends TestVerticle {
     JsonObject config = new JsonObject();
     config.putString("address", "test.orderQueue");
 
-    container.deployModule(System.getProperty("vertx.modulename"), config, 1, new Handler<String>() {
-      public void handle(String res) {
-        container.deployVerticle(OrderProcessor.class.getName(), null, numProcessors, new Handler<String>() {
-          @Override
-          public void handle(String deploymentID) {
-            if (deploymentID != null) {
-              WorkQueueTest.super.start();
+    container.deployModule(System.getProperty("vertx.modulename"), config, 1, new AsyncResultHandler<String>() {
+      public void handle(AsyncResult<String> asyncResult) {
+        if (asyncResult.succeeded()) {
+          container.deployVerticle(OrderProcessor.class.getName(), null, numProcessors, new AsyncResultHandler<String>() {
+            @Override
+            public void handle(AsyncResult<String> asyncResult1) {
+              if (asyncResult1.succeeded()) {
+                WorkQueueTest.super.start();
+              } else {
+                asyncResult1.cause().printStackTrace();
+              }
             }
-          }
-        });
+          });
+        } else {
+          asyncResult.cause().printStackTrace();
+        }
       }
     });
   }

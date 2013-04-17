@@ -39,8 +39,14 @@ function testWorkQueueWithReplyHandler() {
 var queueConfig = {address: 'test.orderQueue'}
 var script = this;
 var numProcessors = 10;
-vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, 1, function() {
-  vertx.deployVerticle("integration_tests/javascript/order_processor_with_reply_handler.js", null, numProcessors, function(depID) {
+vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
+  if (err) {
+    err.printStackTrace();
+  }
+  vertx.deployVerticle("integration_tests/javascript/order_processor_with_reply_handler.js", numProcessors, function(err, depID) {
+    if (err) {
+      err.printStackTrace();
+    }
     if (depID) {
       initTests(script);
     }
