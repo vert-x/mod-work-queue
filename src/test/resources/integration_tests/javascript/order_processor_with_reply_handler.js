@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-load('vertx.js');
-load("vertx_tests.js");
+var vertx = require("vertx")
+var vassert = require("vertx_assert");
 
 var eb = vertx.eventBus;
 

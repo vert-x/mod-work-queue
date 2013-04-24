@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-load('vertx.js')
-load("vertx_tests.js")
+var container = require("container");
+var vertx = require("vertx")
+var vertxTests = require("vertx_tests");
+var vassert = require("vertx_assert");
 
 var eb = vertx.eventBus;
 
@@ -33,11 +35,11 @@ function testPersistentReloadWorkQueue() {
   eb.registerHandler("done", doneHandler);
 
   var persistorConfig = {address: 'test.persistor', db_name: 'test_db', fake: true}
-  vertx.deployModule('io.vertx~mod-mongo-persistor~2.0.0-SNAPSHOT', persistorConfig, function(err, deployID) {
+  container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-SNAPSHOT', persistorConfig, function(err, deployID) {
     insertWork();
     var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
-    vertx.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
-      vertx.deployVerticle('integration_tests/javascript/order_processor.js', 10);
+    container.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
+      container.deployVerticle('integration_tests/javascript/order_processor.js', 10);
     });
   });
 }
@@ -55,4 +57,4 @@ function insertWork() {
   }
 }
 
-initTests(this)
+vertxTests.startTests(this)
