@@ -34,7 +34,19 @@ function testPersistentReloadWorkQueue() {
 
   eb.registerHandler("done", doneHandler);
 
-  var persistorConfig = {address: 'test.persistor', db_name: 'test_db', fake: true}
+  var persistorConfig =
+  {
+    address: 'test.persistor',
+    db_name: java.lang.System.getProperty("vertx.mongo.database", "test_db"),
+    host: java.lang.System.getProperty("vertx.mongo.host", "localhost"),
+    port: java.lang.Integer.valueOf(java.lang.System.getProperty("vertx.mongo.port", "27017"))
+  }
+  var username = java.lang.System.getProperty("vertx.mongo.username");
+  var password = java.lang.System.getProperty("vertx.mongo.password");
+  if (username != null) {
+    persistorConfig.username = username;
+    persistorConfig.password = password;
+  }
   container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-SNAPSHOT', persistorConfig, function(err, deployID) {
     insertWork(function() {
       var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
