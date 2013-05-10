@@ -36,22 +36,30 @@ function testPersistentReloadWorkQueue() {
 
   var persistorConfig = {address: 'test.persistor', db_name: 'test_db', fake: true}
   container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-SNAPSHOT', persistorConfig, function(err, deployID) {
-    insertWork();
-    var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
-    container.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
-      container.deployVerticle('integration_tests/javascript/order_processor.js', 10);
+    insertWork(function() {
+      var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
+      container.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
+        container.deployVerticle('integration_tests/javascript/order_processor.js', 10);
+      });
     });
+
   });
 }
 
-function insertWork() {
+function insertWork(doneHandler) {
 
+  var count = 0;
   for (var i = 0; i < numMessages; i++) {
     eb.send('test.persistor', {
       collection: 'work',
       action: 'save',
       document: {
         blah: "foo" + i
+      }
+    }, function(reply) {
+      vassert.assertEquals('ok', reply.status);
+      if (++count == numMessages) {
+        doneHandler();
       }
     });
   }
