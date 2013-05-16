@@ -66,6 +66,7 @@ Please edit the details below.
  */
 def configurePom(def pom) {
   pom.project {
+    name rootProject.name
     description 'Work Queue Module for Vert.x'
     inceptionYear '2012'
     packaging 'zip'
