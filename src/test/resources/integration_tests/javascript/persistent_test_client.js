@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-var container = require("container");
+var container = require("vertx/container");
 var vertx = require("vertx")
 var vertxTests = require("vertx_tests");
 var vassert = require("vertx_assert");
@@ -68,7 +68,7 @@ if (username != null) {
 }
 var script = this;
 var numProcessors = 10;
-container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-beta1', persistorConfig, function(err, deployID) {
+container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-CR1', persistorConfig, function(err, deployID) {
   vassert.assertTrue(err === null);
   deleteAll();
   var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}

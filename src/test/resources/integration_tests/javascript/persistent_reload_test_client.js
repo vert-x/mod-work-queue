@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-var container = require("container");
+var container = require("vertx/container");
 var vertx = require("vertx")
 var vertxTests = require("vertx_tests");
 var vassert = require("vertx_assert");
@@ -47,7 +47,7 @@ function testPersistentReloadWorkQueue() {
     persistorConfig.username = username;
     persistorConfig.password = password;
   }
-  container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-beta1', persistorConfig, function(err, deployID) {
+  container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-CR1', persistorConfig, function(err, deployID) {
     insertWork(function() {
       var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
       container.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
