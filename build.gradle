@@ -69,7 +69,7 @@ def configurePom(def pom) {
     name rootProject.name
     description 'Work Queue Module for Vert.x'
     inceptionYear '2012'
-    packaging 'zip'
+    packaging produceJar == 'false' ? 'pom' : 'jar'
     url 'https://github.com/vert-x/mod-work-queue'
 
     developers {
