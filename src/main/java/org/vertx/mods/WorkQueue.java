@@ -35,7 +35,11 @@ public class WorkQueue extends BusModBase {
 
   // LHS is typed as ArrayList to ensure high perf offset based index operations
   private final Queue<String> processors = new LinkedList<>();
+  private final Queue registered = new LinkedList<>();
+  private final Queue unQueue = new LinkedList<>();
   private final Queue<MessageHolder> messages = new LinkedList<>();
+  private final Queue messages = new LinkedList<>();
+  
 
   private long processTimeout;
   private String persistorAddress;
@@ -169,8 +173,14 @@ public class WorkQueue extends BusModBase {
     // The processor
     // can go back on the queue
     vertx.cancelTimer(timeoutID);
-    processors.add(processorAddress);
-    message.reply(reply.body(), null);
+    
+	// If no request to unregister, put processor back.
+	if(!unQueue.remove(processorAddress))
+		processors.add(processorAddress);
+	else
+		registered.remove(processorAddress);
+
+	message.reply(reply.body(), null);
     checkWork();
   }
 
@@ -180,6 +190,7 @@ public class WorkQueue extends BusModBase {
       return;
     }
     processors.add(processor);
+	registered.add(processor);
     checkWork();
     sendOK(message);
   }
@@ -189,8 +200,30 @@ public class WorkQueue extends BusModBase {
     if (processor == null) {
       return;
     }
-    processors.remove(processor);
-    sendOK(message);
+	
+    JsonObject reply = new JsonObject();
+
+    // Don't process if the worker is not in the registered list.
+    // Either because the processor name sent was wrong
+    // or the processor was already removed.
+    if(registered.contains(processor)) {
+        // Sometimes we are lucky and can remove straight away.
+        // Other wise queue the unregister request.
+        if(processors.remove(processor)) {
+            registered.remove(processor);
+
+            reply.putString("message", "removed");
+            sendOK(message, reply);
+        } else {
+            unQueue.add(processor);
+
+            reply.putString("message", "queued");
+            sendOK(message, reply);
+        }
+    } else {
+        reply.putString("message", "not_registered");
+        sendOK(message, reply);
+    }
   }
 
   private void doSend(final Message<JsonObject> message) {
