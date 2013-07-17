@@ -68,7 +68,7 @@ if (username != null) {
 }
 var script = this;
 var numProcessors = 10;
-container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-CR2', persistorConfig, function(err, deployID) {
+container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-final', persistorConfig, function(err, deployID) {
   vassert.assertTrue(err === null);
   deleteAll();
   var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}

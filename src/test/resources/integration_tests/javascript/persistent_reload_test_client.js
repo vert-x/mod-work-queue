@@ -47,7 +47,7 @@ function testPersistentReloadWorkQueue() {
     persistorConfig.username = username;
     persistorConfig.password = password;
   }
-  container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-CR2', persistorConfig, function(err, deployID) {
+  container.deployModule('io.vertx~mod-mongo-persistor~2.0.0-final', persistorConfig, function(err, deployID) {
     insertWork(function() {
       var queueConfig = {address: 'test.orderQueue', persistor_address: 'test.persistor', collection: 'work'}
       container.deployModule(java.lang.System.getProperty("vertx.modulename"), queueConfig, function(err, deployID) {
