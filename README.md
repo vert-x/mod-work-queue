@@ -1,4 +1,6 @@
-# Work Queue
+# Vert.x 2.x is **deprecated** - use instead http://vertx.io
+
+## Work Queue
 
 This module queues messages (work) sent to it, and then forwards the work to one of many processors that may be attached to it, if available.
 
@@ -16,15 +18,15 @@ Another example would be in computational intensive tasks where the task can be 
 
 This module should not be run as a worker.
 
-## Dependencies
+### Dependencies
 
 If this queue is persistent, the module requires a MongoDB persistor module to be running for persisting the queue data. [WIP]
 
-## Name
+### Name
 
 The module name is `work-queue`.
 
-## Configuration
+### Configuration
 
 This module requires the following configuration:
 
@@ -56,9 +58,9 @@ An example, persistent configuration would be:
         "collection": "order_queue"
     }    
 
-## Operations
+### Operations
 
-### Send
+#### Send
 
 To send data to the work queue, just send a JSON message to the main address of the module:
 
@@ -94,7 +96,7 @@ If a problem occurs with the queueing, an error reply will be sent to the `accep
     
 Where `message` is an error message.    
 
-### Register
+#### Register
 
 This is how a processor registers with the work queue. A processor is just an arbitrary handler on the event bus. To register itselfs as a processor, a JSON message is sent to the address given by the main address of the module + `.register`. For example if the main address is `test.orderQueue`, you send the message to `test.orderQueue.register`.
 
@@ -143,7 +145,7 @@ Once the registration is complete, a reply message in this form will be sent to 
         "status": "ok"
     }
 
-### Process Work
+#### Process Work
 
 When a processor receives some work and has completed its processing, it should send an empty reply to the message:
 
@@ -157,7 +159,7 @@ When a processor receives some work and has completed its processing, it should 
 
 This tells the work queue that the work has been processed and can be forgotten about. If a reply is not received within `process_timeout` milliseconds then it will be assumed that the processor failed, and the work will be made available for other processors to process.
 
-### Unregister
+#### Unregister
 
 This is how a processor unregisters with the work queue. To unregister itselfs as a processor, a JSON message is sent to the address given by the main address of the module + `.unregister`. For example if the main address is `test.orderQueue`, you send the message to `test.orderQueue.unregister`.
 
