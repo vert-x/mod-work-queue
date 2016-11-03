@@ -176,3 +176,17 @@ Once the unregister is complete, a reply message will be sent:
     {
         "status": "ok"
     }
+
+### Status
+
+This allows you to query the status of the queue to get the number of jobs that are waiting to be sent to a processor and the number of jobs currently out for processing.
+
+If the queue's address is `test.orderQueue` you send a empty message to `test.orderQueue.status`. A reply will then be sent:
+
+    {
+        "status": "ok",
+        "pending": 523,
+        "processing": 8
+    }
+    
+This would indicate there are 523 jobs waiting to be sent to a processor and 8 currently being processed.

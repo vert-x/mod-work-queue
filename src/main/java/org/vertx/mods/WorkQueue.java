@@ -36,7 +36,10 @@ public class WorkQueue extends BusModBase {
   // LHS is typed as ArrayList to ensure high perf offset based index operations
   private final Queue<String> processors = new LinkedList<>();
   private final Queue<MessageHolder> messages = new LinkedList<>();
-
+  /**
+   * The number of jobs currently out for processing by the registered processors
+   */
+  private int numProcessing = 0;
   private long processTimeout;
   private String persistorAddress;
   private String collection;
@@ -56,24 +59,37 @@ public class WorkQueue extends BusModBase {
       loadMessages();
     }
 
+    // register handler
     Handler<Message<JsonObject>> registerHandler = new Handler<Message<JsonObject>>() {
       public void handle(Message<JsonObject> message) {
         doRegister(message);
       }
     };
     eb.registerHandler(address + ".register", registerHandler);
+    
+    // unregister handler
     Handler<Message<JsonObject>> unregisterHandler = new Handler<Message<JsonObject>>() {
       public void handle(Message<JsonObject> message) {
         doUnregister(message);
       }
     };
     eb.registerHandler(address + ".unregister", unregisterHandler);
+    
+    // accept work item handler
     Handler<Message<JsonObject>> sendHandler = new Handler<Message<JsonObject>>() {
       public void handle(Message<JsonObject> message) {
         doSend(message);
       }
     };
     eb.registerHandler(address, sendHandler);
+    
+    // status handler
+    Handler<Message<JsonObject>> statusHandler = new Handler<Message<JsonObject>>() {
+      public void handle(Message<JsonObject> message) {
+        doStatus(message);
+      }
+    };
+    eb.registerHandler(address + ".status", statusHandler);
   }
 
   // Load all the message into memory
@@ -120,6 +136,7 @@ public class WorkQueue extends BusModBase {
           // Processor timed out - put message back on queue
           logger.warn("Processor timed out, message will be put back on queue");
           messages.add(message);
+          numProcessing--;
         }
       });
       eb.send(address, message.getBody(), new Handler<Message<JsonObject>>() {
@@ -127,6 +144,7 @@ public class WorkQueue extends BusModBase {
           messageReplied(message, reply, address, timeoutID);
         }
       });
+      numProcessing++;
     }
   }
 
@@ -171,6 +189,7 @@ public class WorkQueue extends BusModBase {
     vertx.cancelTimer(timeoutID);
     processors.add(processorAddress);
     message.reply(reply.body(), null);
+    numProcessing--;
     checkWork();
   }
 
@@ -228,6 +247,13 @@ public class WorkQueue extends BusModBase {
     //Been added to the queue so reply if appropriate
     sendAcceptedReply(message.body(), "accepted", null);
     checkWork();
+  }
+  
+  private void doStatus(Message<JsonObject> message) {
+	JsonObject reply = new JsonObject();
+	reply.putNumber("pending", messages.size());
+	reply.putNumber("processing", numProcessing);
+	sendOK(message, reply);
   }
 
   private static class LoadedHolder implements MessageHolder {
